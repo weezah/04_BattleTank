@@ -5,15 +5,28 @@
 #include "TankTurret.h"
 #include "TankAimingComponent.h"
 
-
 // Sets default values for this component's properties
 UTankAimingComponent::UTankAimingComponent()
 {
-	
-	
-	PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = true;
+}
 
-	// ...
+void UTankAimingComponent::BeginPlay()
+{
+    Super::BeginPlay();
+    
+    LastFireTime = FPlatformTime::Seconds();
+}
+
+void UTankAimingComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+    
+    if  ((FPlatformTime::Seconds() - LastFireTime) > ReloadTimeInSeconds)
+        FiringStatus = EFiringState::Reloading;
+    // todo handle locked and firing
+    
+
 }
 
 void UTankAimingComponent::Initialize(UTankBarrel* BarrelToSet, UTankTurret* TurretToSet)
@@ -65,13 +78,13 @@ void UTankAimingComponent::MoveBarrelTowards(FVector AimDirection)
 
 void UTankAimingComponent::Fire()
 {
-    if (!ensure(Barrel))
-        return;
     
-    bool isReloaded = (FPlatformTime::Seconds() - LastFireTime) > ReloadTimeInSeconds;
     
-    if (isReloaded)
+    if (FiringStatus != EFiringState::Reloading)
     {
+        if (!ensure(Barrel))
+            return;
+        
         // Spawn a projectile at the socket location on the barrel
         auto Projectile = GetWorld()->SpawnActor<AProjectile>(
                                                               ProjectileBlueprint,
